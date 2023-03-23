@@ -28,14 +28,40 @@ async function openCSV(Path){
     return csvData;
 }
 
-async function getDatafromDate(value,path){
-    const Data = await openCSV(path);
-    for(let i = 0; i<Data.length; ++i){
-        if(Data[i][0] == String(value)){
-            // console.log(Data[i][1])
-            return Data[i][1]
+
+async function openJSON(Path){
+    
+    let json = new XMLHttpRequest();
+
+    json.open("GET",Path , false);
+    try {
+        json.send(null);
+    } catch (err) {
+        console.log(err)
+    }
+
+    let data = json.response;
+    // data = JSON.parse(JSON.stringify(data));
+    data = JSON.parse(data);
+    return data;
+}
+
+async function getDatafromDate(type,value,path){
+    if(type == "EnName"){
+        const Data = await openCSV(path);
+        for(let i = 0; i<Data.length; ++i){
+            if(Data[i][0] == String(value)){
+                // console.log(Data[i][1])
+                return Data[i][1];
+            }
         }
     }
+    else if(type == "json"){
+        const Data = await openJSON(path);
+        return Data[value]["picPath"][1]
+    }
+    
+    
 }
 
 async function main(UID){
@@ -49,11 +75,38 @@ async function main(UID){
     html += "<p id='signature'>"+Data[Number(Data[1]["signature"])]+"</p>";
 
     const rootCharacterID = Data[Number(Data[Number(Data[1]["profilePicture"])]["avatarId"])];
-    const charaName = await getDatafromDate(rootCharacterID,"./assetData/chara.csv");
-    console.log(charaName)
+    const charaName = await getDatafromDate("EnName",rootCharacterID,"./assetData/chara.csv");
     const imgURL = "https://enka.network/ui/UI_AvatarIcon_" + charaName + ".png";
-    html += "<img src='" + imgURL + "'>";
+    html += "<img id=UserIcon src='" + imgURL + "'>";
+
+    const cardID = Data[Number(Data[Number(Data[1]["showNameCardIdList"])][0])];
+    const cardName = await getDatafromDate("json",cardID,"./assetData/namecards.json");
+    const cardURL = "https://enka.network/ui/" + cardName +".png";
+    html += "<img id=UserCard src='" + cardURL + "'>";
+
+    html += "<img id='UserAchive_img' class='UserAchive' src='./genshin-Artifacter/ArtifacterImageGen/icon/Achievement.png'>";
+    html += "<a id='UserAchive_name' class='UserAchive'>アチーブメント</a><a id='UserAchive_level' class='UserAchive'>"+Data[Number(Data[1]["finishAchievementNum"])]+"</a>";
+
+    html += "<img id='UserTower_img' class='UserTower' src='./genshin-Artifacter/ArtifacterImageGen/icon/Tower.png'>";
+    html += "<a id='UserTower_name' class='UserTower'>深境螺旋</a><a id='UserTower_level' class='UserTower'>"+Data[Number(Data[1]["towerFloorIndex"])]+"-"+Data[Number(Data[1]["towerLevelIndex"])]+"</a>";
+    
+    const showAvatarList = Data[Number(Data[0]["avatarInfoList"])];
+    for(let i=0;i<showAvatarList.length;i++){
+        console.log(Data[Data[showAvatarList[i]]["avatarId"]]);
+        let CharacterID = Data[Data[showAvatarList[i]]["avatarId"]];
+        let charaName = await getDatafromDate("EnName",CharacterID,"./assetData/chara.csv");
+        let imgURL = "https://enka.network/ui/UI_AvatarIcon_" + charaName + ".png";
+        html += "<img id='Chara"+showAvatarList[i]+ "' class='"+showAvatarList[i]+"' src='" + imgURL + "'>";
+        let Level = Data[Data[Number(Data[showAvatarList[i]]["avatarId"]) -1]["level"]]
+        html += "<a id='Level"+showAvatarList[i]+ "' class='"+showAvatarList[i]+"'>"+"Lv."+Level+"</a>";
+    }
+
     document.getElementById("mainInfo").innerHTML = html;
+
+
+    
+    console.log()
+
 
 }
 
